@@ -3,6 +3,7 @@
 #
 import pyfive
 import h5py
+import h5netcdf
 import warnings
 from pathlib import Path
 
@@ -23,7 +24,7 @@ def test_file_contents():
         "enum_var",
     ]
 
-    cannot_handle = ['var_len_str', 'enum_var']
+    cannot_handle = ['var_len_str']
 
     p5contents = set([a for a in p5file])
     h5contents = set([a for a in h5file])
@@ -52,7 +53,6 @@ def test_file_contents():
                 dh5x = h5x.dims
                 dp5x = p5x.dims
                 assert len(dh5x) == len(dp5x)
-                print(p5x)
         except:
             print('Attempting to compare ',x)
             print(h5file[x])
@@ -75,3 +75,23 @@ def test_file_contents():
     assert p5file["subgroup/y"].id == p5file[ref3].id
     assert str(p5file["subgroup/y"][:]) == str(p5file[ref3][:])
     assert p5file["y"].id != p5file[ref3].id
+
+    # enumeration attribute
+    p5x = p5file["enum_var"].attrs["_FillValue"]
+    h5x = h5file["enum_var"].attrs["_FillValue"]
+    assert p5x == h5x
+    assert p5x.dtype == h5x.dtype
+
+
+def test_complex_file():
+    p5file = pyfive.File(DIRNAME / 'complex_variable.nc')
+    h5file = h5py.File(DIRNAME / 'complex_variable.nc')
+
+    print(p5file)
+    print(h5file)
+
+    assert p5file["data"] == h5file["data"]
+
+
+
+

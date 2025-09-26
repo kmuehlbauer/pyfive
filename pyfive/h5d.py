@@ -84,7 +84,7 @@ class DatasetID:
         self._msg_offset, self.layout_class,self.property_offset = dataobject.get_id_storage_params()
         self._unique = (self._filename, self.shape, self._msg_offset)
 
-        if isinstance(dataobject.dtype,tuple):
+        if isinstance(dataobject.dtype, tuple):
             if dataobject.dtype[0] == 'ENUMERATION':
                 self._dtype = np.dtype(dataobject.dtype[1], metadata={'enum':dataobject.dtype[2]})
             else:

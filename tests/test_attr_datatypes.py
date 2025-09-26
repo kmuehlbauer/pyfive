@@ -107,6 +107,17 @@ def test_vlen_sequence_attr_datatypes():
         assert_array_equal(vlen_attr[2], [4, 5])
 
 
+def test_enume_attr_datatypes():
+
+    with pyfive.File(ATTR_DATATYPES_HDF5_FILE) as hfile:
+        import h5py
+        enum_attr = hfile.attrs['enum']
+        assert enum_attr == 2
+        assert enum_attr.dtype == h5py.special_dtype(
+    enum=(np.int32, {'one': 1, 'two': 2, 'three': 3})
+)
+
+
 def test_attributes_2():
 
     ascii = "ascii"

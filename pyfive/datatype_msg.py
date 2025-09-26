@@ -20,9 +20,13 @@ class DatatypeMessage(object):
     def determine_dtype(self):
         """ Return the dtype (often numpy-like) for the datatype message.  """
         datatype_msg = _unpack_struct_from(DATATYPE_MSG, self.buf, self.offset)
+        print("determine:", datatype_msg)
         self.offset += DATATYPE_MSG_SIZE
         # last 4 bits
         datatype_class = datatype_msg['class_and_version'] & 0x0F
+        datatype_version = datatype_msg['class_and_version'] >> 4
+        print("class:", datatype_class)
+        print("version:", datatype_version)
 
         if datatype_class == DATATYPE_FIXED_POINT:
             return self._determine_dtype_fixed_point(datatype_msg)
@@ -56,7 +60,11 @@ class DatatypeMessage(object):
         """ Return the NumPy dtype for a fixed point class. """
         # fixed-point types are assumed to follow IEEE standard format
         length_in_bytes = datatype_msg['size']
-        if length_in_bytes not in [1, 2, 4, 8]:
+        if length_in_bytes == 0:
+            length_in_bytes = 4
+
+        print(length_in_bytes)
+        if length_in_bytes not in [1, 2, 4, 8, 2048]:
             raise NotImplementedError("Unsupported datatype size")
 
         signed = datatype_msg['class_bit_field_0'] & 0x08
@@ -106,25 +114,57 @@ class DatatypeMessage(object):
 
     def _determine_dtype_compound(self, datatype_msg):
         """ Return the dtype of a compound class if supported. """
+        print("DATATYPE_MESSAGE", datatype_msg)
+        #enum_msg = _unpack_struct_from(COMPOUND_PROP_DESC_V1, self.buf,
+        #                               self.offset - DATATYPE_MSG_SIZE)
+        dt_version = datatype_msg["class_and_version"] >> 4
+        dt_class = datatype_msg["class_and_version"] & 0x0f
+
         bit_field_0 = datatype_msg['class_bit_field_0']
         bit_field_1 = datatype_msg['class_bit_field_1']
         n_comp = bit_field_0 + (bit_field_1 << 4)
-
+        print("No.:", n_comp)
         # read in the members of the compound datatype
         # at the moment we need to skip two bytes which I do
         # 
         members = []
         for _ in range(n_comp):
+
             null_location = self.buf.index(b'\x00', self.offset)
-            name_size = _padded_size(null_location - self.offset + 1, 8)
+            if dt_version == 3:
+                name_size = int(null_location - self.offset + 1)
+            else:
+                name_size = _padded_size(null_location - self.offset + 1, 8)
+            print("name_size:", name_size)
             name = self.buf[self.offset:self.offset+name_size]
             name = name.strip(b'\x00').decode('utf-8')
             self.offset += name_size
 
-            prop_desc = _unpack_struct_from(
-                COMPOUND_PROP_DESC_V1, self.buf, self.offset)
-            self.offset += COMPOUND_PROP_DESC_V1_SIZE
-
+            if dt_version == 1:
+                prop_desc = _unpack_struct_from(
+                    COMPOUND_PROP_DESC_V1, self.buf, self.offset)
+                self.offset += COMPOUND_PROP_DESC_V1_SIZE
+                print(name, prop_desc, COMPOUND_PROP_DESC_V1_SIZE)
+            else:
+                dtype_msg = DatatypeMessage(self.buf, self.offset)
+                _dtype_msg = _unpack_struct_from(DATATYPE_MSG, self.buf, self.offset)
+                member_size = _dtype_msg["size"]
+                print("MS:", name, dtype_msg, member_size)
+                if member_size < 256:
+                    offset_len = 1
+                elif member_size < 65536:
+                    offset_len = 2
+                elif member_size < 2 ** 32:
+                    offset_len = 4
+                else:
+                    offset_len = 8
+                prop_desc = {}
+                prop_desc["name"] = name
+                prop_desc["offset"] = int.from_bytes(self.buf[self.offset:self.offset + offset_len],
+                                               'little')
+                prop_desc["datatype"] = dtype_msg
+                self.offset += offset_len
+                #self.offset = member_size
             comp_dtype = self.determine_dtype()
             members.append((name, prop_desc, comp_dtype))
 
@@ -171,7 +211,7 @@ class DatatypeMessage(object):
         character_set = datatype_msg['class_bit_field_1'] & 0x01
         return ('VLEN_STRING', padding_type, character_set)
 
-    def _determine_dtype_enum(self,datatype_msg):
+    def _determine_dtype_enum(self, datatype_msg):
         """ Return the basetype and the underlying enum dictionary """
         #FIXME: Consider overlap with the compound code, refactor in some way?
         # Doing this rather than what is done in compound data type as doing that is opaque and risky

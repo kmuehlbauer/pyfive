@@ -51,7 +51,13 @@ def _unpack_struct_from_file(structure, fh):
 def _unpack_struct_from(structure, buf, offset=0):
     """ Unpack a structure into an OrderedDict from a buffer of bytes. """
     fmt = '<' + ''.join(structure.values())
+    print(fmt)
+    print(buf[offset:offset+32])
+    print(buf[offset:offset + 32].hex())
+
     values = struct.unpack_from(fmt, buf, offset=offset)
+    print(structure.keys())
+    print(values)
     return OrderedDict(zip(structure.keys(), values))
 
 

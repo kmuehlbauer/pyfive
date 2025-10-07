@@ -23,6 +23,8 @@ class DatatypeMessage(object):
         self.offset += DATATYPE_MSG_SIZE
         # last 4 bits
         datatype_class = datatype_msg['class_and_version'] & 0x0F
+        datatype_version = datatype_msg['class_and_version'] >> 4
+        print("class_and_version", datatype_class, datatype_version)
 
         if datatype_class == DATATYPE_FIXED_POINT:
             return self._determine_dtype_fixed_point(datatype_msg)

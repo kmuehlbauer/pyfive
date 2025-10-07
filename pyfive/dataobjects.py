@@ -221,12 +221,13 @@ class DataObjects(object):
             dtype = DatatypeMessage(buffer, offset).dtype
         except NotImplementedError:
             if name == 'REFERENCE_LIST':
+                dtype = ("REFERENCE", )
                 pass #suppress this one, no one actually cares about these as far as I know
             else:
                 warnings.warn(
                     f"Attribute {name} type not implemented, set to None."
                 )
-            return name, None
+                return name, None
         offset += _padded_size(attr_dict['datatype_size'], padding_multiple)
 
         # Read the dataspace information
@@ -258,6 +259,7 @@ class DataObjects(object):
     def _attr_value(self, dtype, buf, count, offset):
         """ Retrieve an HDF5 attribute value from a buffer. """
 
+        print("attr_value:", dtype, buf, count, offset)
         # first handle ENUMERATION, we just extract the dtype
         if isinstance(dtype, tuple):
             if dtype[0] == "ENUMERATION":

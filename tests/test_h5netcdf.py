@@ -72,6 +72,9 @@ def test_file_contents():
     assert str(p5file[ref1][:]) == str(p5file[ref2][:])
 
     ref3 = p5file["subgroup/y_var"].attrs["DIMENSION_LIST"][0][-1]
+    ref4 = p5file["subgroup/y"].attrs["REFERENCE_LIST"]#[0][-1]
+    print("reflist:", ref4[0])
+    print("ref4:", p5file[ref4[0]])
     assert p5file["subgroup/y"].id == p5file[ref3].id
     assert str(p5file["subgroup/y"][:]) == str(p5file[ref3][:])
     assert p5file["y"].id != p5file[ref3].id
